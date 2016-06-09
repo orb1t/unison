@@ -63,6 +63,8 @@ library
     Unison.Runtime.Unfold
     Unison.Runtime.Vector
     Unison.Runtime.ResourcePool
+    Unison.Runtime.ProcessPool
+    Unison.Runtime.Worker
 
   build-depends:
     aeson,
@@ -86,6 +88,7 @@ library
     network,
     network-simple,
     prelude-extras,
+    process,
     scotty,
     sockaddr,
     stm,
