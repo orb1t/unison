@@ -15,7 +15,7 @@ data Pool a b = Pool {
   -- If there is no available process for that `Budget`, create a new one, 
   -- unless that would exceed the `MaxProcesses` bound, in which case
   -- fail fast with `Left InsufficientProcesses`.
-  evaluate :: Budget -> MaxProcesses -> ID -> a -> IO (Either Err b),
+  evaluate :: Budget -> ID -> a -> IO (Either Err b),
 
   -- | Forcibly kill the process associated with an ID. Any prior `evaluate` for
   -- that `ID` should complete with `Left Killed`.
@@ -25,5 +25,5 @@ data Pool a b = Pool {
   shutdown :: IO ()
 }
 
-pool :: (Serial a, Serial b) => IO ProcessHandle -> IO (Pool a b)
+pool :: (Serial a, Serial b) => IO ProcessHandle -> MaxProcesses -> IO (Pool a b)
 pool createWorker = undefined
