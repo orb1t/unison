@@ -7,9 +7,11 @@ import Unison.Cryptography
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteArray as BA
+import Crypto.Error (throwCryptoError)
 import qualified Crypto.Random as R
 import qualified Crypto.Noise.Cipher as C
 import qualified Crypto.Noise.Cipher.ChaChaPoly1305 as CCP
+import qualified Crypto.Cipher.ChaChaPoly1305 as CCP2
 
 -- Creates a Unison.Cryptography object specialized to use the noise protocol
 -- (http://noiseprotocol.org/noise.html).
@@ -39,19 +41,22 @@ randomBytes' n = do drg <- R.getSystemDRG
                     return bts
 
 encrypt' :: ( ByteArrayAccess cleartext
-            , ByteArray cleartext
+            --, ByteArray cleartext
             , ByteArrayAccess symmetricKey)
          => symmetricKey
          -> [cleartext]
          -> IO Ciphertext
 encrypt' k cts = do
-  let clrtext = BA.concat cts -- :: cleartext
-      key = C.cipherBytesToSym (BA.convert k) :: C.SymmetricKey CCP.ChaChaPoly1305
-      nonce = C.cipherZeroNonce :: C.Nonce CCP.ChaChaPoly1305
-      ad = "" :: C.AssocData
-      ccpct = C.cipherEncrypt key nonce ad clrtext
-      out = C.cipherTextToBytes ccpct
-  return $ BA.convert out
+  let clrtext = BA.concat cts :: cleartext
+      assocData = ""
+      nonce = throwCryptoError $ CCP2.nonce12 (randomBytes' 12) -- nonce = 12 bytes
+      initState = throwCryptoError $ CCP2.initialize k nonce
+      afterAAD = CCP2.finalizeAAD (CCP2.appendAAD assocData initState)
+      (ciphertext, finalState) = CCP2.encrypt clrtext afterAAD
+      authTag = CCP2.finalize finalState -- authTag = 16 bytes
+      out = BA.concat [(BA.convert nonce), (BA.convert ciphertext), (BA.convert authTag)]
+--  return $ BA.convert out
+  return out
 
 decrypt' :: ( ByteArrayAccess symmetricKey
             , ByteArray cleartext)
